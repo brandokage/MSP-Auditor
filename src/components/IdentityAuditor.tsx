@@ -1,10 +1,12 @@
 "use client";
 
-import { Crown, Download, FileSpreadsheet, FileUp, KeyRound, PiggyBank, Search, ShieldOff, UserX, Users } from "lucide-react";
+import { Cloud, Crown, Download, FileSpreadsheet, FileUp, KeyRound, PiggyBank, Search, ShieldOff, UserX, Users } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import { downloadText } from "@/lib/download";
 import { formatUsd } from "@/lib/grading";
-import { STALE_DAYS, auditCsvFiles, type AuditedUser, type FlagCode, type IdentityAudit } from "@/lib/identity";
+import { makeGraphGet, loadLiveUsers } from "@/lib/graph";
+import { STALE_DAYS, auditCsvFiles, auditUsers, type AuditedUser, type FlagCode, type IdentityAudit } from "@/lib/identity";
+import { describeSignInError, isLiveConnectConfigured, signInForGraph } from "@/lib/msalClient";
 import { buildBlankTemplateCsv, buildSampleCsv } from "@/lib/sampleData";
 import { Button, Card, EmptyState, GradeBadge, Kpi, SectionTitle, cx } from "./ui";
 
@@ -44,6 +46,24 @@ export function IdentityAuditor({
   const [filter, setFilter] = useState<Filter>("flagged");
   const [query, setQuery] = useState("");
   const fileInput = useRef<HTMLInputElement>(null);
+  const [connecting, setConnecting] = useState(false);
+  const liveAvailable = isLiveConnectConfigured();
+
+  /** Live mode: sign in to Microsoft 365 in a popup, read the tenant (read-only), then run the same audit as a CSV. */
+  async function handleConnect() {
+    setError(null);
+    setConnecting(true);
+    try {
+      const { token, account } = await signInForGraph();
+      const { users, warnings } = await loadLiveUsers(makeGraphGet(token));
+      onAudit(auditUsers(users, `Microsoft 365 (live) · ${account}`, warnings));
+      setFilter("flagged");
+    } catch (e) {
+      setError(describeSignInError(e) ?? (e instanceof Error ? e.message : "Could not connect to Microsoft 365."));
+    } finally {
+      setConnecting(false);
+    }
+  }
 
   async function handleFiles(list: FileList | null | undefined) {
     const files = Array.from(list ?? []);
@@ -148,6 +168,22 @@ export function IdentityAuditor({
           </p>
         </section>
       </div>
+
+      {liveAvailable && (
+        <div className="flex flex-col gap-3 rounded-md border border-moss-300 bg-moss-50/50 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="flex items-center gap-2 font-serif text-lg font-semibold text-ink-900">
+              <Cloud className="h-5 w-5 text-moss-700" /> Connect Microsoft 365 (live, read-only)
+            </h3>
+            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-stone-700">
+              Sign in as an admin and the audit reads the tenant directly: users, MFA registration, last sign-in, Global Admins and licenses. It can only read. Data goes from Microsoft to this browser tab and nowhere else, and closing the tab erases it.
+            </p>
+          </div>
+          <Button onClick={handleConnect} disabled={connecting}>
+            <Cloud className="h-4 w-4" /> {connecting ? "Connecting…" : "Connect Microsoft 365"}
+          </Button>
+        </div>
+      )}
 
       <div
         onDragOver={(e) => {

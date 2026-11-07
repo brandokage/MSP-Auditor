@@ -185,7 +185,7 @@ function parseDate(v: string | undefined): Date | null | "unreadable" {
   return isNaN(d.getTime()) ? "unreadable" : d;
 }
 
-function parseAccountType(v: string | undefined, upn: string, name: string): AccountType {
+export function parseAccountType(v: string | undefined, upn: string, name: string): AccountType {
   const s = `${v ?? ""}`.toLowerCase();
   if (/guest/.test(s) || /#ext#/i.test(upn)) return "Guest";
   if (/shared|service|room|resource|equipment/.test(s)) return "Shared/Service";

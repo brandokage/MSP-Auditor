@@ -11,6 +11,7 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  env: { NEXT_PUBLIC_TRAILING_SLASH: isPages ? "1" : "" },
   ...(isPages && {
     output: "export",
     basePath,

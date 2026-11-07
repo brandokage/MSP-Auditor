@@ -15,6 +15,7 @@
     "validate:tenant": "tsx scripts/validate-tenant.mts"
   },
   "dependencies": {
+    "@azure/msal-browser": "^5.29.0",
     "lucide-react": "^1.61.0",
     "next": "15.5.28",
     "react": "19.1.0",
